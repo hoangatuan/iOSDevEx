@@ -6,4 +6,4 @@
 3. Check for unused code
 4. Check for code coverage
 5. Check for app size, module size
-6. 
+6. Big image 
