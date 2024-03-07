@@ -2,6 +2,7 @@
 import ArgumentParser
 import Foundation
 import Files
+import ShellOut
 
 struct DetectSlowCompile: ParsableCommand {
 
@@ -33,6 +34,9 @@ struct DetectSlowCompile: ParsableCommand {
     #endif
 
     func run() throws {
+
+        FileManager.default.changeCurrentDirectoryPath(projectRootPath)
+
         // Step 1: Interate through all the files
         let filePaths = try getPackageFilePaths()
         for path in filePaths {
@@ -51,11 +55,38 @@ struct DetectSlowCompile: ParsableCommand {
         }
 
         // Step 2: Build and generate the logs file
-        // xcodebuild -workspace YourWorkspace.xcworkspace -scheme YourScheme clean build OTHER_SWIFT_FLAGS="-Xfrontend -warn-long-function-bodies"
-
-//        xcodebuild [build options] [project/scheme options] | tee build_log.txt
+        do {
+            try shellOut(to: "xcodebuild", arguments: [
+                "-workspace \(workspace)",
+                "-scheme \(scheme)",
+                "-sdk iphonesimulator",
+                "-destination 'platform=iOS Simulator,name=iPhone 15 Pro'",
+                "OTHER_SWIFT_FLAGS=\"-Xfrontend -warn-long-function-bodies=\(warnLongFunctionBodies) -Xfrontend -warn-long-expression-type-checking=\(warnLongExpressionTypeChecking)\"",
+                "clean",
+                "build",
+                "| tee build_log.txt"
+//                "| grep .[0-9]ms | grep -v ^0.[0-9]ms | sort -nr > culprits.txt"
+            ])
+        } catch let error {
+            debugPrint(error.localizedDescription)
+        }
 
         // Step 3: Processing the logs file
+        let regex1: String = ".*(limit: \(warnLongFunctionBodies)ms).*"
+        let regex2: String = ".*(limit: \(warnLongExpressionTypeChecking)ms).*"
+        let contents = try File(path: "build_log.txt").readAsString().components(separatedBy: "\n")
+
+        var arr: [String] = []
+        for (index, content) in contents.enumerated() {
+            print(index)
+//            if content.matches(regex1) || content.matches(regex2) {
+//                arr.append(content)
+//            }
+        }
+
+        for text in arr {
+            debugPrint(text)
+        }
     }
 
     private func getPackageFilePaths() throws -> [String] {
