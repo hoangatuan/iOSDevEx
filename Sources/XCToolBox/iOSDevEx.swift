@@ -1,11 +1,12 @@
 
 import ArgumentParser
+import ToolBoxCore
 
 struct DevExCommand: AsyncParsableCommand {
     static var configuration = CommandConfiguration(
         commandName: "iOSDevEx",
         abstract: "📦 A tool box to enhance your application",
-        version: version,
+        version: Version.current,
         subcommands: [
             DetectSlowCompile.self
         ],
