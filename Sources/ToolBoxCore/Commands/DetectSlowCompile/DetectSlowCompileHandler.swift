@@ -24,21 +24,18 @@ public class DetectSlowCompileHandler {
     }
 
     public func detect() throws -> [String] {
-
-        // Step 1
-        try createTempProject()
-        FileManager.default.changeCurrentDirectoryPath(tempDirectoryURL)
-
-        // Step 2
-        try modifyPackageFiles()
-
-        // Step 3
-        let results = try generateWarningForXcode15_3()
-
-        // Step 4
-        try cleanUp()
-
-        return results
+        do {
+            try createTempProject()
+            FileManager.default.changeCurrentDirectoryPath(tempDirectoryURL)
+            
+            try modifyPackageFiles()
+            let results = try generateWarningForXcode15_3()
+            try cleanUp()
+            return results
+        } catch {
+            try cleanUp()
+            throw error
+        }
     }
 
     private func modifyPackageFiles() throws {
