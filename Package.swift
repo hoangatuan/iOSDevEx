@@ -13,7 +13,9 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.0"),
-        .package(url: "https://github.com/JohnSundell/Files", from: "4.2.0")
+        .package(url: "https://github.com/JohnSundell/Files", from: "4.2.0"),
+        .package(url: "https://github.com/JohnSundell/ShellOut", from: "2.3.0"),
+        .package(url: "https://github.com/MobileNativeFoundation/XCLogParser", from: "0.2.38")
 
     ],
     targets: [
@@ -21,7 +23,9 @@ let package = Package(
             name: "iOSDevEx",
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
-                "Files"
+                "Files",
+                "ShellOut",
+                "XCLogParser"
             ]
         ),
     ]
