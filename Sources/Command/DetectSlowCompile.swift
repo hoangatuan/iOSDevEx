@@ -38,7 +38,7 @@ struct DetectSlowCompile: ParsableCommand {
 
         FileManager.default.changeCurrentDirectoryPath(projectRootPath)
 
-        // Step 1: Interate through all the files
+         Step 1: Interate through all the files
         let filePaths = try getPackageFilePaths()
         for path in filePaths {
             let file = try File(path: path)
@@ -57,23 +57,47 @@ struct DetectSlowCompile: ParsableCommand {
 
         // Step 2: Build and generate the logs file
         do {
-            try shellOut(to: "xcodebuild", arguments: [
-                "-workspace \(workspace)",
-                "-scheme \(scheme)",
-                "-sdk iphonesimulator",
-                "-destination 'platform=iOS Simulator,name=iPhone 15 Pro'",
-                "OTHER_SWIFT_FLAGS=\"-Xfrontend -warn-long-function-bodies=\(warnLongFunctionBodies) -Xfrontend -warn-long-expression-type-checking=\(warnLongExpressionTypeChecking)\"",
-//                "-derivedDataPath", /// to support in case CI/CD pipelines run in parallel
-                "clean",
-                "build",
-//                "| tee build_log.txt"
-//                "| grep .[0-9]ms | grep -v ^0.[0-9]ms | sort -nr > culprits.txt"
-            ])
-            
-            try runParseCommand()
+//            let warnings = try generateWarningsForXcodeSmallerThan15_3()
+            let warnings = try generateWarningForXcode15_3()
         } catch let error {
-            debugPrint("Tuanha24: \(error)")
+            debugPrint("\(error)")
         }
+    }
+
+    /// This function will be used for Xcode smaller than 15.3
+    private func generateWarningsForXcodeSmallerThan15_3() throws -> [String]? {
+        try shellOut(to: "xcodebuild", arguments: [
+            "-workspace \(workspace)",
+            "-scheme \(scheme)",
+            "-sdk iphonesimulator",
+            "-destination 'platform=iOS Simulator,name=iPhone 15 Pro'",
+            "OTHER_SWIFT_FLAGS=\"-Xfrontend -warn-long-function-bodies=\(warnLongFunctionBodies) -Xfrontend -warn-long-expression-type-checking=\(warnLongExpressionTypeChecking)\"",
+//                "-derivedDataPath", /// to support in case CI/CD pipelines run in parallel
+            "-resultBundlePath ./BuildResults",
+            "clean",
+            "build"
+        ])
+
+        return try runParseCommand()
+    }
+
+    private func generateWarningForXcode15_3() throws -> [String]? {
+        try shellOut(to: "xcodebuild", arguments: [
+            "-workspace \(workspace)",
+            "-scheme \(scheme)",
+            "-sdk iphonesimulator",
+            "-destination 'platform=iOS Simulator,name=iPhone 15 Pro'",
+            "OTHER_SWIFT_FLAGS=\"-Xfrontend -warn-long-function-bodies=\(warnLongFunctionBodies) -Xfrontend -warn-long-expression-type-checking=\(warnLongExpressionTypeChecking)\"",
+//                "-derivedDataPath", /// to support in case CI/CD pipelines run in parallel
+            "clean",
+            "build",
+            "| grep .[0-9]ms | grep -v ^0.[0-9]ms | grep \"^\(projectRootPath)\" | sort -nr > warning.txt"
+        ])
+
+        let content = try String(contentsOfFile: "warning.txt")
+
+        let warnings = content.split(separator: "\n")
+        return warnings.map { String($0) }
     }
 
     private func getPackageFilePaths() throws -> [String] {
@@ -87,8 +111,7 @@ struct DetectSlowCompile: ParsableCommand {
         return results
     }
 
-    private func runParseCommand() throws {
-        let commandHandler = CommandHandler()
+    private func runParseCommand() throws -> [String]? {
         let logOptions = LogOptions(
             projectName: "",
             xcworkspacePath: workspace,
@@ -96,38 +119,23 @@ struct DetectSlowCompile: ParsableCommand {
             derivedDataPath: "",
             xcactivitylogPath: ""
         )
-        
-        let actionOptions = ActionOptions(reporter: Reporter.issues,
-                                          outputPath: "",
-                                          redacted: false,
-                                          withoutBuildSpecificInformation: false,
-                                          machineName: "",
-                                          rootOutput: "",
-                                          omitWarningsDetails: false,
-                                          omitNotesDetails: false,
-                                          truncLargeIssues: false)
-        let action = Action.parse(options: actionOptions)
-        let command = Command(logOptions: logOptions, action: action)
-        try commandHandler.handle(command: command)
+
+        let logFinder = LogFinder()
+        let activityLogParser = ActivityParser()
+        let logURL = try logFinder.findLatestLogWithLogOptions(logOptions)
+
+        let activityLog = try activityLogParser.parseActivityLogInURL(logURL,
+                                                                      redacted: false,
+                                                                      withoutBuildSpecificInformation:
+                                                                        false)
+
+        let buildParser = ParserBuildSteps(machineName: "",
+                                           omitWarningsDetails: false,
+                                           omitNotesDetails: true,
+                                           truncLargeIssues: false)
+
+        let buildSteps = try buildParser.parse(activityLog: activityLog)
+        return buildSteps.warnings?.compactMap { $0.detail }
     }
     
 }
-
-/*
- // Step 3: Processing the logs file
- let regex1: String = ".*(limit: \(warnLongFunctionBodies)ms).*"
- let regex2: String = ".*(limit: \(warnLongExpressionTypeChecking)ms).*"
- let contents = try File(path: "build_log.txt").readAsString().components(separatedBy: "\n")
-
- var arr: [String] = []
- for (index, content) in contents.enumerated() {
-     print(index)
-//            if content.matches(regex1) || content.matches(regex2) {
-//                arr.append(content)
-//            }
- }
-
- for text in arr {
-     debugPrint(text)
- }
- */
