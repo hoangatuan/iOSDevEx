@@ -15,6 +15,11 @@ You can easily integrate this tool to your CI workflow.
 
 This command uses to check for high compile-time functions and generate reports.
 
+```bash
+  iosdevex -workspace $WORKSPACE -scheme $SCHEME -warnLongFunctionBodies 200 -warnLongExpressionTypeChecking 200
+```
+
+
 # Contribute ⚙️
 
 If you find a bug or you would like to propose an improvement, you're welcome to create an issue.
