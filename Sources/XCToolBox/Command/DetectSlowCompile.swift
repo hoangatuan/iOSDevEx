@@ -16,9 +16,9 @@ struct DetectSlowCompile: ParsableCommand {
     #if DEBUG
     var project: String = ""
 
-    var workspace: String = "/Users/tuanhoang/Documents/iMovie/iMovie.xcworkspace"
+    var workspace: String = "/Users/tuanhoang/Documents/iOSDevEx/ExampleProject/Cocoapod/CocoapodDemoProject/CocoapodDemoProject.xcworkspace"
 
-    var scheme: String = "iMovie"
+    var scheme: String = "CocoapodDemoProject"
 
     var projectRootPath: String = ""
 
@@ -50,10 +50,10 @@ struct DetectSlowCompile: ParsableCommand {
     """)
     var projectRootPath: String
 
-    @Argument(help: "")
+    @Argument(help: "The warnLongFunctionBodies value threshold")
     var warnLongFunctionBodies: Int
 
-    @Argument(help: "")
+    @Argument(help: "The warnLongExpressionTypeChecking value threshold")
     var warnLongExpressionTypeChecking: Int
     #endif
 

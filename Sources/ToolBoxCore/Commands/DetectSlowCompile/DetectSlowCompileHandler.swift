@@ -28,7 +28,9 @@ public class DetectSlowCompileHandler {
             try createTempProject()
             FileManager.default.changeCurrentDirectoryPath(tempDirectoryURL)
             
-            try modifyPackageFiles()
+            try modifyPackageFilesIfNeed()
+            try modifyPodfilesIfNeed()
+            
             let results = try generateWarningForXcode15_3()
             try cleanUp()
             return results
@@ -38,8 +40,8 @@ public class DetectSlowCompileHandler {
         }
     }
 
-    private func modifyPackageFiles() throws {
-        let filePaths = try getPackageFilePaths()
+    private func modifyPackageFilesIfNeed() throws {
+        let filePaths = try Folder(path: tempDirectoryURL).getFilePaths(contain: "Package.swift")
         for path in filePaths {
             let file = try File(path: path)
             let config = """
@@ -55,16 +57,36 @@ public class DetectSlowCompileHandler {
             try file.append(config, encoding: .utf8)
         }
     }
-
-    private func getPackageFilePaths() throws -> [String] {
-        var results: [String] = []
-        try Folder(path: tempDirectoryURL).files.recursive.forEach { file in
-            if file.path.contains("Package.swift") {
-                results.append(file.path)
+    
+    private func modifyPodfilesIfNeed() throws {
+        let filePaths = try Folder(path: tempDirectoryURL).getFilePaths(hasSuffix: "Podfile")
+        for path in filePaths {
+            let file = try File(path: path)
+            let config = """
+            \npost_install do |installer|
+                installer.pods_project.targets.each do |target|
+                    target.build_configurations.each do |config|
+                        config.build_settings['OTHER_SWIFT_FLAGS'] = [
+                            "-Xfrontend", "-warn-long-function-bodies=\(config.warnLongFunctionBodies)",
+                            "-Xfrontend", "-warn-long-expression-type-checking=\(config.warnLongExpressionTypeChecking)"
+                        ]
+                    end
+                end
+            end
+            """
+            try file.append(config, encoding: .utf8)
+        }
+        
+        if !filePaths.isEmpty {
+            do {
+//                try shellOut(to: "sudo ln -s /opt/homebrew/bin/pod /usr/local/bin/pod")
+//                try shellOut(to: "export PATH=\"/opt/homebrew/bin:$PATH\"")
+                let command = ShellOutCommand.installCocoaPods()
+                try shellOut(to: command)
+            } catch let er {
+                print(er.localizedDescription)
             }
         }
-
-        return results
     }
 
     private func createTempProject() throws {
