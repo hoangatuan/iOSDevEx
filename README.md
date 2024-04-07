@@ -10,6 +10,7 @@ This is a toolbox that contains different devex solutions for optimizing your iO
 - [Slow Compile Detection](#slow-compile-detection)
 - [Unused Image Detection](#unused-image-detection)
 - [Unused Code Detection](#unused-code-detection)
+- [Recommended Resources](#recommended-resources)
 - [Contribute](#contribute)
 
 ## Slow compile detection
@@ -27,6 +28,12 @@ This command uses to check for high compile-time functions and generate reports.
 ## Unused code detection
 
 - [Periphery](https://github.com/peripheryapp/periphery)
+
+## Recommended Resources
+
+I created another project containing highly recommended articles/resources about iOS app performance that are worth reading. You can find the project here
+
+- [iOS Performance Optimization](https://github.com/hoangatuan/iOS-Performance-Optimization)
 
 # Contribute ⚙️
 
